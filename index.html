@@ -31,8 +31,8 @@
   <label>Gabarito Oficial (10 letras sem espaço, ex: ABCDABCDAB):</label>
   <input type="text" id="gabarito" maxlength="10" value="ABCDABCDAB" oninput="this.value = this.value.toUpperCase()">
 
-  <label>URL do Google Apps Script (opcional para envio direto):</label>
-  <input type="text" id="script-url" placeholder="https://script.google.com/macros/s/.../exec">
+  <label>URL do Google Apps Script:</label>
+  <input type="text" id="script-url" placeholder="https://script.google.com/macros/s/.../exec" oninput="salvarUrlScript()">
 </div>
 
 <button class="btn-cam" onclick="iniciarCamera()">1. Abrir Câmera</button>
@@ -55,6 +55,19 @@
 let cvPronto = false;
 let ultimaLeitura = null;
 let historico = [];
+
+// Carrega URL salva no navegador ao iniciar
+window.addEventListener('DOMContentLoaded', () => {
+  const urlSalva = localStorage.getItem('omr_script_url');
+  if (urlSalva) {
+    document.getElementById('script-url').value = urlSalva;
+  }
+});
+
+function salvarUrlScript() {
+  const url = document.getElementById('script-url').value.trim();
+  localStorage.setItem('omr_script_url', url);
+}
 
 function onOpenCvReady() {
   cvPronto = true;
@@ -109,7 +122,6 @@ function capturarEProcessar() {
       cv.approxPolyDP(cnt, approx, 0.04 * peri, true);
       let rect = cv.boundingRect(approx);
       let ratio = rect.width / rect.height;
-      // Quadrado sólido (proporção próxima de 1)
       if (approx.rows === 4 && ratio >= 0.75 && ratio <= 1.25) {
         let m = cv.moments(cnt);
         ancoras.push({ x: m.m10 / m.m00, y: m.m01 / m.m00, area: area });
@@ -119,19 +131,18 @@ function capturarEProcessar() {
   }
 
   if (ancoras.length < 4) {
-    alert("Não encontrei os 4 quadrados pretos dos cantos. Enquadre melhor a área das bolinhas com boa iluminação.");
+    alert("Não encontrei os 4 quadrados pretos dos cantos. Enquadre melhor a área com boa iluminação.");
     src.delete(); gray.delete(); thresh.delete(); contours.delete(); hierarchy.delete();
     return;
   }
 
-  // Pega os 4 maiores quadrados encontrados e ordena: TL, TR, BL, BR
   ancoras.sort((a, b) => b.area - a.area);
   let top4 = ancoras.slice(0, 4);
   top4.sort((a, b) => a.y - b.y);
   let top2 = top4.slice(0, 2).sort((a, b) => a.x - b.x);
   let bot2 = top4.slice(2, 4).sort((a, b) => a.x - b.x);
 
-  // 2. Corrigir perspectiva para um retângulo fixo de 800x600 px
+  // 2. Corrigir perspectiva para 800x600 px
   const W = 800, H = 600;
   let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
     top2[0].x, top2[0].y,
@@ -146,34 +157,33 @@ function capturarEProcessar() {
   cv.warpPerspective(thresh, warped, M, new cv.Size(W, H));
   cv.warpPerspective(src, warpedColor, M, new cv.Size(W, H));
 
-  // Função auxiliar que mede o preenchimento de uma bolinha na coordenada proporcional (px, py)
   function lerBolinha(px, py) {
     let cx = Math.round(px * W);
     let cy = Math.round(py * H);
-    let r = 13;
+    let r = 12;
     let roi = warped.roi(new cv.Rect(cx - r, cy - r, r * 2, r * 2));
     let preenchido = cv.countNonZero(roi);
     roi.delete();
     return { preenchido, cx, cy };
   }
 
-  // 3. Ler Nº de Chamada (Dezena: 0-3 | Unidade: 0-9)
+  // 3. Ler Nº de Chamada (Ajustado para o layout do Word)
   let dezena = 0, maxDez = 0;
   for (let d = 0; d <= 3; d++) {
-    let res = lerBolinha(0.145, 0.335 + d * 0.056);
-    cv.circle(warpedColor, new cv.Point(res.cx, res.cy), 12, [0, 255, 255, 255], 2);
+    let res = lerBolinha(0.272, 0.355 + d * 0.052);
+    cv.circle(warpedColor, new cv.Point(res.cx, res.cy), 11, [0, 255, 255, 255], 2);
     if (res.preenchido > maxDez) { maxDez = res.preenchido; dezena = d; }
   }
 
   let unidade = 0, maxUni = 0;
   for (let u = 0; u <= 9; u++) {
-    let res = lerBolinha(0.225, 0.335 + u * 0.056);
-    cv.circle(warpedColor, new cv.Point(res.cx, res.cy), 12, [0, 255, 255, 255], 2);
+    let res = lerBolinha(0.345, 0.355 + u * 0.052);
+    cv.circle(warpedColor, new cv.Point(res.cx, res.cy), 11, [0, 255, 255, 255], 2);
     if (res.preenchido > maxUni) { maxUni = res.preenchido; unidade = u; }
   }
   let numChamada = `${dezena}${unidade}`;
 
-  // 4. Ler 10 Questões (A, B, C, D)
+  // 4. Ler 10 Questões A, B, C, D (Ajustado para alinhar perfeitamente)
   const gabarito = document.getElementById('gabarito').value.trim();
   const letras = ['A', 'B', 'C', 'D'];
   let acertos = 0;
@@ -181,11 +191,11 @@ function capturarEProcessar() {
 
   for (let q = 0; q < 10; q++) {
     let melhorLetra = '-';
-    let maxPixels = 160; // Limiar mínimo para considerar pintada
+    let maxPixels = 150; 
     let melhorPonto = null;
 
     for (let opt = 0; opt < 4; opt++) {
-      let res = lerBolinha(0.495 + opt * 0.088, 0.280 + q * 0.062);
+      let res = lerBolinha(0.550 + opt * 0.076, 0.285 + q * 0.063);
       if (res.preenchido > maxPixels) {
         maxPixels = res.preenchido;
         melhorLetra = letras[opt];
@@ -199,11 +209,10 @@ function capturarEProcessar() {
 
     if (melhorPonto) {
       let cor = correta ? [0, 255, 0, 255] : [255, 0, 0, 255];
-      cv.circle(warpedColor, new cv.Point(melhorPonto.cx, melhorPonto.cy), 14, cor, 3);
+      cv.circle(warpedColor, new cv.Point(melhorPonto.cx, melhorPonto.cy), 13, cor, 3);
     }
   }
 
-  // Mostra imagem corrigida com círculos verdes/vermelhos na tela
   canvas.style.display = 'block';
   cv.imshow(canvas, warpedColor);
 
@@ -236,7 +245,7 @@ async function enviarParaPlanilha() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ultimaLeitura)
     });
-    alert(`✅ Aluno ${ultimaLeitura.chamada} (Nota ${ultimaLeitura.nota}) enviado para a planilha!`);
+    alert(`✅ Aluno ${ultimaLeitura.chamada} (Nota ${ultimaLeuritNota = ultimaLeitura.nota}) enviado para a planilha!`);
   } catch (e) {
     alert("Erro ao enviar: " + e);
   }
