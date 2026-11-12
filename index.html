@@ -6,23 +6,23 @@
 <title>Leitor OMR - Cartão Resposta</title>
 <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();"></script>
 <style>
-  body { font-family: Arial, sans-serif; margin: 0; padding: 15px; background: #121212; color: #fff; text-align: center; }
-  h2 { margin-top: 0; font-size: 18px; }
-  .card { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; }
-  label { display: block; font-size: 13px; margin-bottom: 5px; color: #bbb; }
-  input[type="text"] { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #444; background: #2c2c2c; color: #fff; box-sizing: border-box; font-size: 15px; margin-bottom: 10px; }
-  button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+  body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background: #121212; color: #fff; text-align: center; }
+  h2 { margin-top: 0; font-size: 16px; }
+  .card { background: #1e1e1e; padding: 10px; border-radius: 8px; margin-bottom: 10px; text-align: left; }
+  label { display: block; font-size: 12px; margin-bottom: 3px; color: #bbb; }
+  input[type="text"] { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #444; background: #2c2c2c; color: #fff; box-sizing: border-box; font-size: 14px; margin-bottom: 8px; }
+  button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
   .btn-cam { background: #1a73e8; color: white; }
   .btn-scan { background: #0f9d58; color: white; }
   .btn-send { background: #f4b400; color: #000; }
-  .btn-csv  { background: #555; color: #fff; font-size: 13px; padding: 10px; }
+  .btn-csv  { background: #555; color: #fff; font-size: 12px; padding: 8px; }
   
-  /* Container da câmera com as guias amarelas */
+  /* Container da câmera na horizontal */
   .camera-container {
     position: relative;
     width: 100%;
-    max-width: 450px;
-    margin: 10px auto;
+    max-width: 650px;
+    margin: 5px auto;
     display: none;
     border-radius: 8px;
     overflow: hidden;
@@ -30,7 +30,7 @@
   }
   video { width: 100%; display: block; }
   
-  /* Guias visuais nos 4 cantos ajustadas para a proporção do documento */
+  /* Guias visuais ajustadas para o modo horizontal (paisagem) */
   .guias-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -40,30 +40,30 @@
   }
   .canto {
     position: absolute;
-    width: 35px;
-    height: 35px;
+    width: 30px;
+    height: 30px;
     border-color: #ffc107;
     border-style: solid;
     border-width: 0;
   }
-  .canto-tl { top: 22%; left: 12%; border-top-width: 4px; border-left-width: 4px; }
-  .canto-tr { top: 22%; right: 12%; border-top-width: 4px; border-right-width: 4px; }
-  .canto-bl { bottom: 22%; left: 12%; border-bottom-width: 4px; border-left-width: 4px; }
-  .canto-br { bottom: 22%; right: 12%; border-bottom-width: 4px; border-right-width: 4px; }
+  .canto-tl { top: 12%; left: 15%; border-top-width: 4px; border-left-width: 4px; }
+  .canto-tr { top: 12%; right: 15%; border-top-width: 4px; border-right-width: 4px; }
+  .canto-bl { bottom: 12%; left: 15%; border-bottom-width: 4px; border-left-width: 4px; }
+  .canto-br { bottom: 12%; right: 15%; border-bottom-width: 4px; border-right-width: 4px; }
 
-  canvas { width: 100%; max-width: 450px; border-radius: 8px; border: 2px solid #333; margin-top: 10px; }
-  #resultado-box { background: #263238; padding: 15px; border-radius: 8px; margin-top: 10px; display: none; }
-  .destaque { font-size: 22px; font-weight: bold; color: #4caf50; }
-  #status-cv { font-size: 12px; color: #ff9800; margin-bottom: 10px; }
+  canvas { width: 100%; max-width: 650px; border-radius: 8px; border: 2px solid #333; margin-top: 5px; }
+  #resultado-box { background: #263238; padding: 10px; border-radius: 8px; margin-top: 5px; display: none; }
+  .destaque { font-size: 20px; font-weight: bold; color: #4caf50; }
+  #status-cv { font-size: 12px; color: #ff9800; margin-bottom: 5px; }
 </style>
 </head>
 <body>
 
-<h2>📷 Leitor de Gabaritos</h2>
+<h2>📷 Leitor de Gabaritos (Modo Paisagem)</h2>
 <div id="status-cv">Carregando motor de visão (OpenCV)...</div>
 
 <div class="card">
-  <label>Gabarito Oficial (10 letras sem espaço, ex: ABCDABCDAB):</label>
+  <label>Gabarito Oficial (10 letras sem espaço):</label>
   <input type="text" id="gabarito" maxlength="10" value="ABCDABCDAB" oninput="this.value = this.value.toUpperCase()">
 
   <label>URL do Google Apps Script:</label>
@@ -72,7 +72,6 @@
 
 <button class="btn-cam" onclick="iniciarCamera()">1. Abrir Câmera</button>
 
-<!-- Área da Câmera com as Marcas Amarelas nos Cantos -->
 <div class="camera-container" id="camera-box">
   <video id="video" playsinline autoplay></video>
   <div class="guias-overlay">
@@ -90,7 +89,7 @@
 <div id="resultado-box">
   <div>Aluno Nº: <span id="res-chamada" class="destaque">--</span></div>
   <div>Nota: <span id="res-nota" class="destaque">--</span> / 10</div>
-  <div style="font-size: 13px; margin-top: 5px; color: #ccc;">Lido: <span id="res-detalhes"></span></div>
+  <div style="font-size: 12px; margin-top: 3px; color: #ccc;">Lido: <span id="res-detalhes"></span></div>
   <br>
   <button class="btn-send" onclick="enviarParaPlanilha()">3. Enviar para Google Planilhas</button>
 </div>
@@ -175,7 +174,7 @@ function capturarEProcessar() {
   }
 
   if (ancoras.length < 4) {
-    alert("Não encontrei os 4 quadrados pretos dos cantos. Alinhe os cantos da folha dentro das marcações amarelas.");
+    alert("Não encontrei os 4 quadrados pretos. Alinhe os cantos do cartão dentro das marcações amarelas.");
     src.delete(); gray.delete(); thresh.delete(); contours.delete(); hierarchy.delete();
     return;
   }
