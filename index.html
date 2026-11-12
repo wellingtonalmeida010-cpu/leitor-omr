@@ -57,7 +57,7 @@
 </head>
 <body>
 
-<h2>📷 Leitor de Gabaritos (Modo Paisagem)</h2>
+<h2>📷 Leitor de Gabaritos</h2>
 <div id="status-cv">Carregando motor de visão (OpenCV)...</div>
 
 <div class="card">
@@ -183,7 +183,7 @@ function capturarEProcessar() {
   let top2 = top4.slice(0, 2).sort((a, b) => a.x - b.x);
   let bot2 = top4.slice(2, 4).sort((a, b) => a.x - b.x);
 
-  // Mantém a proporção horizontal correta (W maior que H para paisagem)
+  // Padroniza a área de recorte em formato paisagem (800x600)
   const W = 800, H = 600;
   let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
     top2[0].x, top2[0].y,
@@ -201,30 +201,30 @@ function capturarEProcessar() {
   function lerBolinha(px, py) {
     let cx = Math.round(px * W);
     let cy = Math.round(py * H);
-    let r = 12;
+    let r = 10;
     let roi = warped.roi(new cv.Rect(cx - r, cy - r, r * 2, r * 2));
     let preenchido = cv.countNonZero(roi);
     roi.delete();
     return { preenchido, cx, cy };
   }
 
-  // 3. Ler Nº de Chamada (Ajustado para o bloco esquerdo do cartão paisagem)
+  // 3. Ler Nº de Chamada baseado na estrutura exata do HTML do cartão
   let dezena = 0, maxDez = 0;
   for (let d = 0; d <= 3; d++) {
-    let res = lerBolinha(0.315, 0.355 + d * 0.052);
-    cv.circle(warpedColor, new cv.Point(res.cx, res.cy), 11, [0, 255, 255, 255], 2);
+    let res = lerBolinha(0.282, 0.400 + d * 0.052);
+    cv.circle(warpedColor, new cv.Point(res.cx, res.cy), 10, [0, 255, 255, 255], 2);
     if (res.preenchido > maxDez) { maxDez = res.preenchido; dezena = d; }
   }
 
   let unidade = 0, maxUni = 0;
   for (let u = 0; u <= 9; u++) {
-    let res = lerBolinha(0.380, 0.355 + u * 0.052);
-    cv.circle(warpedColor, new cv.Point(res.cx, res.cy), 11, [0, 255, 255, 255], 2);
+    let res = lerBolinha(0.355, 0.400 + u * 0.052);
+    cv.circle(warpedColor, new cv.Point(res.cx, res.cy), 10, [0, 255, 255, 255], 2);
     if (res.preenchido > maxUni) { maxUni = res.preenchido; unidade = u; }
   }
   let numChamada = `${dezena}${unidade}`;
 
-  // 4. Ler 10 Questões A, B, C, D (Ajustado para o bloco direito do cartão paisagem)
+  // 4. Ler 10 Questões (A, B, C, D) mapeadas exatamente conforme o loop do cartão
   const gabarito = document.getElementById('gabarito').value.trim();
   const letras = ['A', 'B', 'C', 'D'];
   let acertos = 0;
@@ -232,11 +232,12 @@ function capturarEProcessar() {
 
   for (let q = 0; q < 10; q++) {
     let melhorLetra = '-';
-    let maxPixels = 150; 
+    let maxPixels = 120; // Limiar ajustado para o tamanho real da bolinha
     let melhorPonto = null;
 
     for (let opt = 0; opt < 4; opt++) {
-      let res = lerBolinha(0.560 + opt * 0.055, 0.285 + q * 0.063);
+      // Espaçamento horizontal e vertical sincronizado com o grid do cartão
+      let res = lerBolinha(0.565 + (opt * 0.058), 0.285 + (q * 0.063));
       if (res.preenchido > maxPixels) {
         maxPixels = res.preenchido;
         melhorLetra = letras[opt];
@@ -250,7 +251,7 @@ function capturarEProcessar() {
 
     if (melhorPonto) {
       let cor = correta ? [0, 255, 0, 255] : [255, 0, 0, 255];
-      cv.circle(warpedColor, new cv.Point(melhorPonto.cx, melhorPonto.cy), 13, cor, 3);
+      cv.circle(warpedColor, new cv.Point(melhorPonto.cx, melhorPonto.cy), 11, cor, 2);
     }
   }
 
@@ -263,7 +264,7 @@ function capturarEProcessar() {
     acertos: `${acertos}/10`,
     respostas: respostasLidas.join('')
   };
-  historico.push(ultimaLeytucao = ultimaLeitura);
+  historico.push(ultimaLeitura);
 
   document.getElementById('res-chamada').innerText = numChamada;
   document.getElementById('res-nota').innerText = acertos;
