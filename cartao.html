@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Cartão-Resposta Compacto</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    background: #f0f0f0;
+  }
+  .folha-a4 {
+    width: 180mm;
+    background: #ffffff;
+    padding: 10mm;
+    box-sizing: border-box;
+  }
+  @media print {
+    body { background: none; }
+    .no-print { display: none; }
+  }
+
+  .cabecalho {
+    text-align: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 4mm;
+    margin-bottom: 8mm;
+  }
+  .cabecalho h2 { margin: 0 0 4mm 0; font-size: 15pt; }
+  .campos-texto {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11pt;
+  }
+
+  /* Área delimitada pelas 4 âncoras (APENAS em volta das bolinhas) */
+  .zona-leitura {
+    position: relative;
+    padding: 12mm; /* Espaço para os quadrados não encostarem nas caixas */
+    display: flex;
+    justify-content: space-between;
+    gap: 8mm;
+  }
+
+  /* 4 Quadrados pretos abraçando a área de respostas */
+  .ancora {
+    width: 8mm;
+    height: 8mm;
+    background: #000000;
+    position: absolute;
+  }
+  .top-left     { top: 0; left: 0; }
+  .top-right    { top: 0; right: 0; }
+  .bottom-left  { bottom: 0; left: 0; }
+  .bottom-right { bottom: 0; right: 0; }
+
+  .bloco {
+    border: 1.5px solid #000;
+    padding: 4mm;
+    border-radius: 2mm;
+    background: #fff;
+  }
+  .bloco h3 {
+    margin: 0 0 3mm 0;
+    font-size: 10pt;
+    text-align: center;
+    background: #eee;
+    padding: 2mm;
+  }
+
+  .linha {
+    display: flex;
+    align-items: center;
+    margin-bottom: 3mm;
+  }
+  .num-questao {
+    width: 8mm;
+    font-weight: bold;
+    font-size: 10pt;
+  }
+  .bolinha {
+    width: 6mm;
+    height: 6mm;
+    border: 1.5px solid #000;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8.5pt;
+    font-weight: bold;
+    margin-right: 2.5mm;
+    color: #333;
+  }
+  .col-chamada {
+    display: flex;
+    gap: 5mm;
+    justify-content: center;
+  }
+  .digito-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2mm;
+  }
+  .digito-col span {
+    font-size: 8.5pt;
+    font-weight: bold;
+    margin-bottom: 1mm;
+  }
+  .btn-imprimir {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    padding: 12px 20px;
+    background: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+</style>
+</head>
+<body>
+
+<button class="btn-imprimir no-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+
+<div class="folha-a4">
+  <div class="cabecalho">
+    <h2>CARTÃO-RESPOSTA - AVALIAÇÃO</h2>
+    <div class="campos-texto">
+      <span><strong>Aluno:</strong> _____________________________________</span>
+      <span><strong>Turma:</strong> _______</span>
+    </div>
+  </div>
+
+  <!-- Zona que a câmera vai recortar -->
+  <div class="zona-leitura">
+    <div class="ancora top-left"></div>
+    <div class="ancora top-right"></div>
+    <div class="ancora bottom-left"></div>
+    <div class="ancora bottom-right"></div>
+
+    <!-- Bloco 1: Número de Chamada (00 a 39) -->
+    <div class="bloco" style="width: 42mm;">
+      <h3>Nº CHAMADA</h3>
+      <p style="font-size: 7.5pt; text-align: center; margin-top: 0;">Pinte 1 por coluna</p>
+      <div class="col-chamada" id="grade-chamada"></div>
+    </div>
+
+    <!-- Bloco 2: 10 Questões (A, B, C, D) -->
+    <div class="bloco" style="flex: 1;">
+      <h3>RESPOSTAS (Pinte completamente)</h3>
+      <div id="grade-questoes"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const gradeChamada = document.getElementById('grade-chamada');
+  
+  const colDezena = document.createElement('div');
+  colDezena.className = 'digito-col';
+  colDezena.innerHTML = '<span>DEZ</span>';
+  for (let d = 0; d <= 3; d++) {
+    colDezena.innerHTML += `<div class="bolinha">${d}</div>`;
+  }
+
+  const colUnidade = document.createElement('div');
+  colUnidade.className = 'digito-col';
+  colUnidade.innerHTML = '<span>UNI</span>';
+  for (let u = 0; u <= 9; u++) {
+    colUnidade.innerHTML += `<div class="bolinha">${u}</div>`;
+  }
+
+  gradeChamada.appendChild(colDezena);
+  gradeChamada.appendChild(colUnidade);
+
+  const gradeQuestoes = document.getElementById('grade-questoes');
+  const opcoes = ['A', 'B', 'C', 'D'];
+
+  for (let q = 1; q <= 10; q++) {
+    const linha = document.createElement('div');
+    linha.className = 'linha';
+    let html = `<div class="num-questao">${q < 10 ? '0' + q : q}.</div>`;
+    opcoes.forEach(letra => {
+      html += `<div class="bolinha">${letra}</div>`;
+    });
+    linha.innerHTML = html;
+    gradeQuestoes.appendChild(linha);
+  }
+</script>
+
+</body>
+</html>
