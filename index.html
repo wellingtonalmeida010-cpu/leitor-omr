@@ -17,7 +17,6 @@
   .btn-send { background: #f4b400; color: #000; }
   .btn-csv  { background: #555; color: #fff; font-size: 12px; padding: 8px; }
   
-  /* Container da câmera na horizontal */
   .camera-container {
     position: relative;
     width: 100%;
@@ -30,7 +29,6 @@
   }
   video { width: 100%; display: block; }
   
-  /* Guias visuais ajustadas para o modo horizontal (paisagem) */
   .guias-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -46,10 +44,10 @@
     border-style: solid;
     border-width: 0;
   }
-  .canto-tl { top: 12%; left: 15%; border-top-width: 4px; border-left-width: 4px; }
-  .canto-tr { top: 12%; right: 15%; border-top-width: 4px; border-right-width: 4px; }
-  .canto-bl { bottom: 12%; left: 15%; border-bottom-width: 4px; border-left-width: 4px; }
-  .canto-br { bottom: 12%; right: 15%; border-bottom-width: 4px; border-right-width: 4px; }
+  .canto-tl { top: 15%; left: 12%; border-top-width: 4px; border-left-width: 4px; }
+  .canto-tr { top: 15%; right: 12%; border-top-width: 4px; border-right-width: 4px; }
+  .canto-bl { bottom: 15%; left: 12%; border-bottom-width: 4px; border-left-width: 4px; }
+  .canto-br { bottom: 15%; right: 12%; border-bottom-width: 4px; border-right-width: 4px; }
 
   canvas { width: 100%; max-width: 650px; border-radius: 8px; border: 2px solid #333; margin-top: 5px; }
   #resultado-box { background: #263238; padding: 10px; border-radius: 8px; margin-top: 5px; display: none; }
@@ -185,6 +183,7 @@ function capturarEProcessar() {
   let top2 = top4.slice(0, 2).sort((a, b) => a.x - b.x);
   let bot2 = top4.slice(2, 4).sort((a, b) => a.x - b.x);
 
+  // Mantém a proporção horizontal correta (W maior que H para paisagem)
   const W = 800, H = 600;
   let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
     top2[0].x, top2[0].y,
@@ -209,21 +208,23 @@ function capturarEProcessar() {
     return { preenchido, cx, cy };
   }
 
+  // 3. Ler Nº de Chamada (Ajustado para o bloco esquerdo do cartão paisagem)
   let dezena = 0, maxDez = 0;
   for (let d = 0; d <= 3; d++) {
-    let res = lerBolinha(0.272, 0.355 + d * 0.052);
+    let res = lerBolinha(0.315, 0.355 + d * 0.052);
     cv.circle(warpedColor, new cv.Point(res.cx, res.cy), 11, [0, 255, 255, 255], 2);
     if (res.preenchido > maxDez) { maxDez = res.preenchido; dezena = d; }
   }
 
   let unidade = 0, maxUni = 0;
   for (let u = 0; u <= 9; u++) {
-    let res = lerBolinha(0.345, 0.355 + u * 0.052);
+    let res = lerBolinha(0.380, 0.355 + u * 0.052);
     cv.circle(warpedColor, new cv.Point(res.cx, res.cy), 11, [0, 255, 255, 255], 2);
     if (res.preenchido > maxUni) { maxUni = res.preenchido; unidade = u; }
   }
   let numChamada = `${dezena}${unidade}`;
 
+  // 4. Ler 10 Questões A, B, C, D (Ajustado para o bloco direito do cartão paisagem)
   const gabarito = document.getElementById('gabarito').value.trim();
   const letras = ['A', 'B', 'C', 'D'];
   let acertos = 0;
@@ -235,7 +236,7 @@ function capturarEProcessar() {
     let melhorPonto = null;
 
     for (let opt = 0; opt < 4; opt++) {
-      let res = lerBolinha(0.550 + opt * 0.076, 0.285 + q * 0.063);
+      let res = lerBolinha(0.560 + opt * 0.055, 0.285 + q * 0.063);
       if (res.preenchido > maxPixels) {
         maxPixels = res.preenchido;
         melhorLetra = letras[opt];
@@ -262,7 +263,7 @@ function capturarEProcessar() {
     acertos: `${acertos}/10`,
     respostas: respostasLidas.join('')
   };
-  historico.push(ultimaLeitura);
+  historico.push(ultimaLeytucao = ultimaLeitura);
 
   document.getElementById('res-chamada').innerText = numChamada;
   document.getElementById('res-nota').innerText = acertos;
